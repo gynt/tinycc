@@ -669,6 +669,32 @@ PUB_FUNC void _tcc_warning(const char *fmt, ...)
 /********************************************************/
 /* I/O layer */
 
+/** Custom open function */
+#ifdef TCC_IO_HOOKS
+
+typedef int (__cdecl *IO_open)(const char *path, int oflag);
+static int default_io_open(const char * filename, int oflags, ...) {
+    return open(filename, oflags);
+}
+static IO_open io_open = default_io_open;
+LIBTCCAPI void tcc_set_io_open(IO_open *func_open)
+{
+    io_open = func_open ? func_open : default_io_open;
+}
+
+/** Custom close function */
+typedef int (__cdecl * IO_close)(int FileHandle);
+static int default_io_close(int FileHandle) {
+    return close(FileHandle);
+}
+static IO_close io_close = default_io_close;
+LIBTCCAPI void tcc_set_io_close(IO_close *func_close)
+{
+    io_close = func_close ? func_close : default_io_close;
+}
+
+#endif // TCC_IO_HOOKS
+
 ST_FUNC void tcc_open_bf(TCCState *s1, const char *filename, int initlen)
 {
     BufferedFile *bf;
@@ -697,7 +723,12 @@ ST_FUNC void tcc_close(void)
     TCCState *s1 = tcc_state;
     BufferedFile *bf = file;
     if (bf->fd > 0) {
+#ifdef TCC_IO_HOOKS
+        io_close(bf->fd);
+#else
         close(bf->fd);
+#endif
+        
         total_lines += bf->line_num - 1;
     }
     if (bf->true_filename != bf->filename)
@@ -713,7 +744,12 @@ static int _tcc_open(TCCState *s1, const char *filename)
     if (strcmp(filename, "-") == 0)
         fd = 0, filename = "<stdin>";
     else
+#ifdef TCC_IO_HOOKS
+        fd = io_open(filename, O_RDONLY | O_BINARY);
+#else
         fd = open(filename, O_RDONLY | O_BINARY);
+#endif
+        
     if ((s1->verbose == 2 && fd >= 0) || s1->verbose == 3)
         printf("%s %*s%s\n", fd < 0 ? "nf":"->",
                (int)(s1->include_stack_ptr - s1->include_stack), "", filename);
@@ -1787,7 +1823,11 @@ static int args_parser_listfile(TCCState *s,
     int argc = 0;
     char **argv = NULL;
 
+#ifdef TCC_IO_HOOKS
+    fd = io_open(filename, O_RDONLY | O_BINARY);
+#else
     fd = open(filename, O_RDONLY | O_BINARY);
+#endif
     if (fd < 0)
         return tcc_error_noabort("listfile '%s' not found", filename);
 
