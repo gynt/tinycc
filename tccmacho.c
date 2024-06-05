@@ -2190,7 +2190,9 @@ ST_FUNC int macho_output_file(TCCState *s1, const char *filename)
     else
         mode = 0777;
     unlink(filename);
-    fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, mode);
+
+    fd = io_open_perm(filename, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, mode);
+
     if (fd < 0 || (fp = fdopen(fd, "wb")) == NULL) {
         tcc_error_noabort("could not write '%s: %s'", filename, strerror(errno));
         return -1;
@@ -2295,7 +2297,8 @@ ST_FUNC const char* macho_tbd_soname(const char* filename) {
     char *soname, *data, *pos;
     const char *ret = filename;
 
-    int fd = open(filename,O_RDONLY);
+    int fd = io_open(filename,O_RDONLY);
+
     if (fd<0) return ret;
     pos = data = tcc_load_text(fd);
     if (!tbd_parse_movepast("install-name: ")) goto the_end;
@@ -2429,7 +2432,9 @@ ST_FUNC int macho_load_dll(TCCState * s1, int fd, const char* filename, int lev)
         {
             struct dylib_command *dc = (struct dylib_command*)lc;
             char *name = (char*)lc + dc->name;
-            int subfd = open(name, O_RDONLY | O_BINARY);
+
+            int subfd = io_open(name, O_RDONLY | O_BINARY);
+
             dprintf(" REEXPORT %s\n", name);
             if (subfd < 0)
               tcc_warning("can't open %s (reexported from %s)", name, filename);
@@ -2437,7 +2442,7 @@ ST_FUNC int macho_load_dll(TCCState * s1, int fd, const char* filename, int lev)
                 /* Hopefully the REEXPORTs never form a cycle, we don't check
                    for that!  */
                 macho_load_dll(s1, subfd, name, lev + 1);
-                close(subfd);
+                io_close(subfd);
             }
             break;
         }

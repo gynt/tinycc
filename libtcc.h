@@ -14,6 +14,12 @@ extern "C" {
 typedef void *TCCReallocFunc(void *ptr, unsigned long size);
 LIBTCCAPI void tcc_set_realloc(TCCReallocFunc *my_realloc);
 
+/****************************/
+/* set custom io open() and close() functions to hook IO. */
+
+typedef int (__cdecl TCCIO_open_perm)(const char *path, int oflag, int pmode);
+LIBTCCAPI void tcc_set_io_open(TCCIO_open_perm * func);
+
 /*****************************/
 typedef struct TCCState TCCState;
 

@@ -363,6 +363,35 @@ extern long double strtold (const char *__nptr, char **__endptr);
 #include "stab.h"
 #include "dwarf.h"
 
+#ifdef TCC_IO_HOOKS
+typedef int (__cdecl TCCIO_open)(const char *filename, int oflag);
+typedef int (__cdecl TCCIO_open_perm)(const char *filename, int oflag, int pmode);
+typedef int (__cdecl TCCIO_close)(int fileHandle);
+
+static TCCIO_open_perm * io_open_perm;
+
+static inline int io_open_default(const char * filename, int oflag) {
+    return io_open_perm(filename, oflag, 0);
+}
+static inline int io_open_perm_default(const char * filename, int oflag, int pmode) {
+    return open(filename, oflag, pmode);
+}
+static inline int io_close_default(int fileHandle) {
+    return close(fileHandle);
+}
+
+static TCCIO_open * io_open = io_open_default;
+static TCCIO_open_perm * io_open_perm = io_open_perm_default;
+static TCCIO_close * io_close = io_close_default;
+
+#else
+
+#define io_open(filename, oflag) open(filename, oflag)
+#define io_close(fileHandle) close(fileHandle)
+#define io_open_perm(filename, oflag, pmode) open(filename, oflag, pmode)
+
+#endif
+
 /* -------------------------------------------- */
 
 #ifndef PUB_FUNC /* functions used by tcc.c but not in libtcc.h */

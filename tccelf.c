@@ -2668,7 +2668,9 @@ static int tcc_write_elf_file(TCCState *s1, const char *filename, int phnum,
     else
         mode = 0777;
     unlink(filename);
-    fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, mode);
+
+    fd = io_open_perm(filename, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, mode);
+
     if (fd < 0 || (f = fdopen(fd, "wb")) == NULL)
         return tcc_error_noabort("could not write '%s: %s'", filename, strerror(errno));
     if (s1->verbose)

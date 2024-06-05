@@ -1846,11 +1846,14 @@ ST_FUNC int pe_load_file(struct TCCState *s1, int fd, const char *filename)
 
 PUB_FUNC int tcc_get_dllexports(const char *filename, char **pp)
 {
-    int ret, fd = open(filename, O_RDONLY | O_BINARY);
+    int ret, fd = io_open(filename, O_RDONLY | O_BINARY);
+
     if (fd < 0)
         return -1;
     ret = get_dllexports(fd, pp);
-    close(fd);
+
+    io_close(fd);
+
     return ret;
 }
 
