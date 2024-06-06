@@ -678,6 +678,13 @@ LIBTCCAPI void tcc_set_io_open(TCCIO_open_perm * func)
 #endif // TCC_IO_HOOKS
 }
 
+LIBTCCAPI void* tcc_get_io_open()
+{
+#ifdef TCC_IO_HOOKS
+    return &io_open_perm_default;
+#endif
+}
+
 /* End of Custom open function */
 
 ST_FUNC void tcc_open_bf(TCCState *s1, const char *filename, int initlen)

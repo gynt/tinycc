@@ -19,6 +19,7 @@ LIBTCCAPI void tcc_set_realloc(TCCReallocFunc *my_realloc);
 
 typedef int (__cdecl TCCIO_open_perm)(const char *path, int oflag, int pmode);
 LIBTCCAPI void tcc_set_io_open(TCCIO_open_perm * func);
+LIBTCCAPI void* tcc_get_io_open();
 
 /*****************************/
 typedef struct TCCState TCCState;
