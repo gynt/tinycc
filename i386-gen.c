@@ -368,7 +368,7 @@ static void gcall_or_jmp(int is_jmp)
         /* otherwise, indirect call */
         r = gv(RC_INT);
 
-        /* If an indirect call to a thiscall, make sure eax isn't used */
+        /* If an indirect call to a thiscall, make sure ecx isn't used */
         if (is_jmp == 0 && (vtop->type.ref)->f.func_call==FUNC_THISCALL) {
             if (r == TREG_ECX) {
                 tcc_error("indirect call to a thiscall cannot use ECX register");
@@ -419,9 +419,6 @@ ST_FUNC void gfunc_call(int nb_args)
     int size, align, r, args_size, i, func_call;
     Sym *func_sym;
 
-    // Look ahead to the function on the stack to get the function call type
-    func_call = ((vtop - nb_args)->type.ref)->f.func_call;
-
 #ifdef CONFIG_TCC_BCHECK
     if (tcc_state->do_bounds_check)
         gbound_args(nb_args);
@@ -429,15 +426,7 @@ ST_FUNC void gfunc_call(int nb_args)
 
     args_size = 0;
     for(i = 0;i < nb_args; i++) {
-        if (func_call == FUNC_THISCALL && i == (nb_args - 1)) {
-            /* If thiscall, zap the last push, as it is `this`. Instead, mov into ecx */
-            /* Since this parameter is always the first (final) parameter, storing in ecx is fine */
-            /* It is not fine if gcall_or_jmp(0) uses ecx to place the function pointer to call to (call ecx) */
-            /* Currently I don't know a way to make sure that never happens */
-            size = 0;
-            load(get_reg(RC_ECX), vtop);
-        }
-        else if ((vtop->type.t & VT_BTYPE) == VT_STRUCT) {
+        if ((vtop->type.t & VT_BTYPE) == VT_STRUCT) {
             size = type_size(&vtop->type, &align);
             /* align to stack align size */
             size = (size + 3) & ~3;
@@ -514,6 +503,9 @@ ST_FUNC void gfunc_call(int nb_args)
             /* XXX: incorrect for struct/floats */
             args_size -= 4;
         }
+    } else if(func_call == FUNC_THISCALL) {
+        o(0x58 + TREG_ECX); /* pop ecx */
+        args_size -= 4;
     }
 #if !defined(TCC_TARGET_PE) && !TARGETOS_FreeBSD || TARGETOS_OpenBSD
     else if ((vtop->type.ref->type.t & VT_BTYPE) == VT_STRUCT)
