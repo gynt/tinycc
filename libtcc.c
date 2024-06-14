@@ -682,6 +682,8 @@ LIBTCCAPI void* tcc_get_io_open()
 {
 #ifdef TCC_IO_HOOKS
     return &io_open_perm_default;
+#else
+    return NULL;
 #endif
 }
 
