@@ -669,6 +669,26 @@ PUB_FUNC void _tcc_warning(const char *fmt, ...)
 /********************************************************/
 /* I/O layer */
 
+/* Custom open function */
+
+LIBTCCAPI void tcc_set_io_open(TCCIO_open_perm * func)
+{
+#ifdef TCC_IO_HOOKS
+    io_open_perm = func ? func : io_open_perm_default;
+#endif // TCC_IO_HOOKS
+}
+
+LIBTCCAPI void* tcc_get_io_open()
+{
+#ifdef TCC_IO_HOOKS
+    return &io_open_perm_default;
+#else
+    return NULL;
+#endif
+}
+
+/* End of Custom open function */
+
 ST_FUNC void tcc_open_bf(TCCState *s1, const char *filename, int initlen)
 {
     BufferedFile *bf;
@@ -697,7 +717,8 @@ ST_FUNC void tcc_close(void)
     TCCState *s1 = tcc_state;
     BufferedFile *bf = file;
     if (bf->fd > 0) {
-        close(bf->fd);
+        io_close(bf->fd);
+        
         total_lines += bf->line_num - 1;
     }
     if (bf->true_filename != bf->filename)
@@ -713,7 +734,8 @@ static int _tcc_open(TCCState *s1, const char *filename)
     if (strcmp(filename, "-") == 0)
         fd = 0, filename = "<stdin>";
     else
-        fd = open(filename, O_RDONLY | O_BINARY);
+        fd = io_open(filename, O_RDONLY | O_BINARY);
+        
     if ((s1->verbose == 2 && fd >= 0) || s1->verbose == 3)
         printf("%s %*s%s\n", fd < 0 ? "nf":"->",
                (int)(s1->include_stack_ptr - s1->include_stack), "", filename);
@@ -1057,8 +1079,8 @@ ST_FUNC int tcc_add_file_internal(TCCState *s1, const char *filename, int flags)
                 dl = dlopen(soname, RTLD_GLOBAL | RTLD_LAZY);
                 if (dl)
                     tcc_add_dllref(s1, soname, 0)->handle = dl, ret = 0;
-	        if (filename != soname)
-		    tcc_free((void *)soname);
+                if (filename != soname)
+                    tcc_free((void *)soname);
 #endif
             } else if (obj_type == AFF_BINTYPE_DYN) {
                 ret = macho_load_dll(s1, fd, filename, (flags & AFF_REFERENCED_DLL) != 0);
@@ -1108,7 +1130,7 @@ check_success:
             break;
 #endif
         }
-        close(fd);
+        io_close(fd);
     } else {
         /* update target deps */
         dynarray_add(&s1->target_deps, &s1->nb_target_deps, tcc_strdup(filename));
@@ -1454,9 +1476,9 @@ static int tcc_set_linker(TCCState *s, const char *option)
 #endif
 #ifdef TCC_TARGET_MACHO
         } else if (link_option(option, "all_load", &p)) {
-	    s->filetype |= AFF_WHOLE_ARCHIVE;
+            s->filetype |= AFF_WHOLE_ARCHIVE;
         } else if (link_option(option, "force_load", &p)) {
-	    s->filetype |= AFF_WHOLE_ARCHIVE;
+            s->filetype |= AFF_WHOLE_ARCHIVE;
             args_parser_add_file(s, p, AFF_TYPE_LIB | (s->filetype & ~AFF_TYPE_MASK));
             s->nb_libraries++;
         } else if (link_option(option, "single_module", &p)) {
@@ -1787,7 +1809,7 @@ static int args_parser_listfile(TCCState *s,
     int argc = 0;
     char **argv = NULL;
 
-    fd = open(filename, O_RDONLY | O_BINARY);
+    fd = io_open(filename, O_RDONLY | O_BINARY);
     if (fd < 0)
         return tcc_error_noabort("listfile '%s' not found", filename);
 
@@ -1929,7 +1951,7 @@ dorun:
         enable_backtrace:
             s->do_backtrace = 1;
             s->do_debug = s->do_debug ? s->do_debug : 1;
-	    s->dwarf = DWARF_VERSION;
+            s->dwarf = DWARF_VERSION;
             break;
 #ifdef CONFIG_TCC_BCHECK
         case TCC_OPTION_b:
@@ -2129,19 +2151,19 @@ dorun:
             x = TCC_OUTPUT_DLL;
             goto set_output_type;
         case TCC_OPTION_flat_namespace:
-	     break;
+             break;
         case TCC_OPTION_two_levelnamespace:
-	     break;
+             break;
         case TCC_OPTION_undefined:
-	     break;
+             break;
         case TCC_OPTION_install_name:
-	    s->install_name = tcc_strdup(optarg);
+            s->install_name = tcc_strdup(optarg);
             break;
         case TCC_OPTION_compatibility_version:
-	    s->compatibility_version = parse_version(s, optarg);
+            s->compatibility_version = parse_version(s, optarg);
             break;
         case TCC_OPTION_current_version:
-	    s->current_version = parse_version(s, optarg);;
+            s->current_version = parse_version(s, optarg);;
             break;
 #endif
         case TCC_OPTION_ar:
