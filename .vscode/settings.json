@@ -1,0 +1,10 @@
+{
+  "editor.formatOnSave": false,
+  "files.associations": {
+    "tcc.h": "c",
+    "libtcc.h": "c",
+    "stdint.h": "c",
+    "windows.h": "c",
+    "io.h": "c"
+  }
+}
